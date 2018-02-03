@@ -10,12 +10,12 @@ class MoneroTransactions(db.Model):
     userid = db.Column(db.INTEGER)
     confirmations = db.Column(db.INTEGER)
     txid = db.Column(db.Text)
-    amount = db.Column(db.INTEGER)
-    balance = db.Column(db.INTEGER)
+    amount = db.Column(db.DECIMAL(20, 8))
+    balance = db.Column(db.DECIMAL(20, 8))
     block = db.Column(db.INTEGER)
     created = db.Column(db.DATETIME)
     address = db.Column(db.Text)
-    fee = db.Column(db.INTEGER)
+    fee = db.Column(db.DECIMAL(20, 8))
     orderid = db.Column(db.INTEGER)
     shard = db.Column(db.INTEGER)
     digital_currency = db.Column(db.INTEGER)
@@ -60,13 +60,12 @@ class monero_unconfirmed(db.Model):
     txid10 = db.Column(db.TEXT)
 
 
-
 class monero_Wallet(db.Model):
     __tablename__ = 'monero_wallet'
     __bind_key__ = 'monero_wallet'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     userid = db.Column(db.INTEGER)
-    currentbalance = db.Column(db.INTEGER)
+    currentbalance = db.Column(db.DECIMAL(20, 8))
     address1 = db.Column(db.TEXT)
     address1status = db.Column(db.INTEGER)
     locked = db.Column(db.INTEGER)
@@ -74,6 +73,7 @@ class monero_Wallet(db.Model):
     transactioncount = db.Column(db.INTEGER)
     unconfirmed = db.Column(db.DECIMAL(20, 8))
     paymentid = db.Column(db.TEXT)
+
 
 class monero_Wallet_Work(db.Model):
     __tablename__ = 'monero_wallet_work'
@@ -83,9 +83,9 @@ class monero_Wallet_Work(db.Model):
     type = db.Column(db.INTEGER)
     amount = db.Column(db.DECIMAL(20, 8))
     sendto = db.Column(db.Text)
-    comment = db.Column(db.Text)
+    paymentid = db.Column(db.Text)
     created = db.Column(db.DATETIME)
-    txtcomment = db.Column(db.Text)
+    txnumber = db.Column(db.INTEGER)
     shard = db.Column(db.INTEGER)
 
 

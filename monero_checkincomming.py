@@ -9,7 +9,7 @@ from app.monero_wallet_models import \
     MoneroTransactions
 
 from monero_addtotransactions import monero_addtransaction
-
+from decimal import Decimal
 
 # simple wallet is running on the localhost and port of 18082
 url = "http://test:test@localhost:28080/json_rpc"
@@ -23,11 +23,11 @@ def checkincomming():
 
     # getblockinfo
     lastblockheight = db.session.query(MoneroBlockheight).filter_by(id=1).first()
-
+    lastchecked = lastblockheight.lastcheckedheight
     rpc_input = {
         "method": "get_bulk_payments",
         "params": {"payment_ids": True,
-                   "min_block_height": 1080697}
+                   "min_block_height": lastchecked}
     }
 
     # add standard rpc values
@@ -41,16 +41,16 @@ def checkincomming():
         auth=HTTPDigestAuth(rpcusername, rpcpassword))
 
     response_json = response.json()
-    #print(json.dumps(response.json(), indent=4))
+    print(json.dumps(response.json(), indent=4))
 
     if "result" in response_json:
         if "payments" in response_json["result"]:
             for incpayments in response_json["result"]["payments"]:
                 userpaymentid = incpayments['payment_id']
-                amount = incpayments['amount']
+
                 blockheight = incpayments['block_height']
                 hashid = incpayments['tx_hash']
-
+                amount = Decimal(get_money(str(incpayments['amount'])))
                 # get user with that payment id
                 getuserswallet = db.session.query(monero_Wallet).filter_by(paymentid=userpaymentid).first()
                 if getuserswallet is not None:
@@ -58,12 +58,14 @@ def checkincomming():
                     # see if already in db
                     gettransaction = db.session.query(MoneroTransactions).filter_by(txid=hashid).first()
                     if gettransaction is None:
+
                         # add amount to current balance
                         currentbalance = getuserswallet.currentbalance
-                        newbalance = int(currentbalance) + int(amount)
+                        newbalance = Decimal(currentbalance) + Decimal(amount)
                         getuserswallet.currentbalance = newbalance
                         db.session.add(getuserswallet)
                         db.session.commit()
+
                         # add to transactions
                         monero_addtransaction(category=3,
                                               amount=amount,
@@ -72,7 +74,9 @@ def checkincomming():
                                               shard=shard,
                                               block=blockheight,
                                               balance=newbalance,
-
+                                              confirmed=0,
+                                              fee=0,
+                                              address=''
                                               )
 
                         if int(lastblockheight.blockheight) < int(blockheight):
@@ -81,6 +85,7 @@ def checkincomming():
                             db.session.commit()
                         else:
                             pass
+
 
                     else:
                         # check to see how many confirmations
@@ -105,7 +110,20 @@ def checkincomming():
                     #user has no wallet..future update
                    pass
 
+def get_money(amount):
+    movetwelvedecimals = 12
 
+    s = amount
+
+    if len(s) < movetwelvedecimals + 1:
+        # add some trailing zeros, if needed, to have constant width
+        s = '0' * (movetwelvedecimals + 1 - len(s)) + s
+
+    idx = len(s) - movetwelvedecimals
+
+    s = s[0:idx] + "." + s[idx:]
+
+    return s
 checkincomming()
 
 

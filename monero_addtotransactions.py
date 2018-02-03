@@ -4,7 +4,16 @@ from app import db
 
 
 # this function will move the coin from holdings back to vendor.  This is for vendor verification
-def monero_addtransaction(category, amount, userid, txid, shard, block, balance):
+def monero_addtransaction(category,
+                          amount,
+                          userid,
+                          txid,
+                          shard,
+                          block,
+                          balance,
+                          confirmed,
+                          fee,
+                          address):
     try:
         now = datetime.utcnow()
         txidd = str(txid)
@@ -14,14 +23,14 @@ def monero_addtransaction(category, amount, userid, txid, shard, block, balance)
             category=category,
             userid=userid,
             confirmations=0,
-            confirmed=1,
+            confirmed=confirmed,
             txid=txidd,
             amount=amount,
             balance=balance,
             block=theblock,
             created=now,
-            address='',
-            fee=0,
+            address=address,
+            fee=fee,
             orderid=0,
             shard=shard,
             digital_currency=4,
