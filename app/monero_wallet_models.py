@@ -27,7 +27,6 @@ class monero_transOrphan(db.Model):
     __bind_key__ = 'monero_wallet'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     btc = db.Column(db.DECIMAL(20, 8))
-    btcaddress = db.Column(db.TEXT)
     txid = db.Column(db.TEXT)
 
 
