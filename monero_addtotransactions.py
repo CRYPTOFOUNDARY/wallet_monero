@@ -3,17 +3,21 @@ from app.monero_wallet_models import MoneroTransactions
 from app import db
 
 
-# this function will move the coin from holdings back to vendor.  This is for vendor verification
-def monero_addtransaction(category,
-                          amount,
-                          userid,
-                          txid,
-                          shard,
-                          block,
-                          balance,
-                          confirmed,
-                          fee,
-                          address):
+def monero_addtransaction(category, amount, userid, txid, shard, block, balance, confirmed, fee, address):
+    """
+    # this function will move the coin from holdings back to vendor.  This is for vendor verification
+    :param category:
+    :param amount:
+    :param userid:
+    :param txid:
+    :param shard:
+    :param block:
+    :param balance:
+    :param confirmed:
+    :param fee:
+    :param address:
+    :return:
+    """
     try:
         now = datetime.utcnow()
         txidd = str(txid)

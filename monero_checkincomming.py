@@ -13,6 +13,9 @@ from app.monero_wallet_models import \
 from monero_addtotransactions import monero_addtransaction
 from decimal import Decimal
 from app.generalfunctions import floating_decimals
+
+
+
 # simple wallet is running on the localhost and port of 18082
 url = "http://test:test@localhost:28080/json_rpc"
 
@@ -21,8 +24,15 @@ headers = {'content-type': 'application/json'}
 
 
 
-# this function can track multiple incomming unconfirmed amounts
+
 def addtounconfirmed(amount, userid, txid):
+    """
+    # this function can track multiple incomming unconfirmed amounts
+    :param amount:
+    :param userid:
+    :param txid:
+    :return:
+    """
     unconfirmedtable = db.session.query(monero_unconfirmed).filter_by(userid=userid).first()
     x = floating_decimals(amount, 8)
     if unconfirmedtable is None:
@@ -110,8 +120,14 @@ def addtounconfirmed(amount, userid, txid):
             print(str(e))
 
 
-# this function removes the amount from unconfirmed
+
 def removeunconfirmed(userid, txid):
+    """
+    # this function removes the amount from unconfirmed
+    :param userid:
+    :param txid:
+    :return:
+    """
 
     try:
         unconfirmeddelete = db.session.query(monero_unconfirmed).filter_by(userid=userid).first()
@@ -180,8 +196,13 @@ def removeunconfirmed(userid, txid):
         print(str(e))
 
 
-# this function removes the amount from unconfirmed
+
 def getbalanceUnconfirmed(userid):
+    """
+    # this function removes the amount from unconfirmed
+    :param userid:
+    :return:
+    """
     unconfirmeddelete = db.session.query(monero_unconfirmed).filter_by(userid=userid).first()
     
     a = Decimal(unconfirmeddelete.unconfirmed1)

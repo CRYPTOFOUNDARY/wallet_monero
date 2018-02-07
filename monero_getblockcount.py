@@ -1,14 +1,10 @@
 import requests
 from requests.auth import HTTPDigestAuth
 import json
-from walletconfig import rpcpassword, rpcusername, shard
+from walletconfig import rpcpassword, rpcusername
 from app import db
 from app.monero_wallet_models import \
-    monero_Wallet,\
-    MoneroBlockheight,\
-    MoneroTransactions
-
-from monero_addtotransactions import monero_addtransaction
+    MoneroBlockheight
 
 
 # simple wallet is running on the localhost and port of 18082
