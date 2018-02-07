@@ -43,7 +43,6 @@ def monero_addtransaction(category, amount, userid, txid, shard, block, balance,
         db.session.add(trans)
         db.session.commit()
 
-
     except Exception as e:
         print("transaction error")
         print(str(e))

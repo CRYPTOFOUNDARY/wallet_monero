@@ -9,7 +9,8 @@ def deleteoldorder():
         for f in getwork:
             db.session.delete(f)
             db.session.commit()
-    except:
+    except Exception as e:
+        print(str(e))
         db.session.rollback()
         pass
 

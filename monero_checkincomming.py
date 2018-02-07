@@ -1,7 +1,7 @@
 import requests
 from requests.auth import HTTPDigestAuth
 import json
-from walletconfig import rpcpassword, rpcusername, shard
+from walletconfig import rpcpassword, rpcusername, shard, url
 from app import db
 from app.monero_wallet_models import \
     monero_Wallet,\
@@ -14,10 +14,6 @@ from monero_addtotransactions import monero_addtransaction
 from decimal import Decimal
 from app.generalfunctions import floating_decimals
 
-
-
-# simple wallet is running on the localhost and port of 18082
-url = "http://test:test@localhost:28080/json_rpc"
 
 # standard json header
 headers = {'content-type': 'application/json'}
@@ -227,141 +223,147 @@ def getbalanceUnconfirmed(userid):
 
 def checkincomming():
     # getblockinfo
-    lastblockheight = db.session.query(MoneroBlockheight).filter_by(id=1).first()
-    lastchecked = lastblockheight.lastcheckedheight
-    print("checkig incomming coin..")
-    print("Last checked coin: ", lastchecked)
-    rpc_input = {
-        "method": "get_bulk_payments",
-        "params": {"payment_ids": True,
-                   "min_block_height": lastchecked}
-    }
+    try:
+        lastblockheight = db.session.query(MoneroBlockheight).filter_by(id=1).first()
+        lastchecked = lastblockheight.lastcheckedheight
+        rpc_input = {
+            "method": "get_bulk_payments",
+            "params": {"payment_ids": True,
+                       "min_block_height": lastchecked}
+        }
 
-    # add standard rpc values
-    rpc_input.update({"jsonrpc": "2.0", "id": "0"})
+        # add standard rpc values
+        rpc_input.update({"jsonrpc": "2.0", "id": "0"})
 
-    # execute the rpc request
-    response = requests.post(
-        url,
-        data=json.dumps(rpc_input),
-        headers=headers,
-        auth=HTTPDigestAuth(rpcusername, rpcpassword))
+        # execute the rpc request
+        response = requests.post(
+            url,
+            data=json.dumps(rpc_input),
+            headers=headers,
+            auth=HTTPDigestAuth(rpcusername, rpcpassword))
 
-    response_json = response.json()
+        response_json = response.json()
 
-    if "result" in response_json:
-        if "payments" in response_json["result"]:
-            for incpayments in response_json["result"]["payments"]:
-                userpaymentid = incpayments['payment_id']
+        if "result" in response_json:
+            if "payments" in response_json["result"]:
+                for incpayments in response_json["result"]["payments"]:
+                    userpaymentid = incpayments['payment_id']
 
-                blockheight = incpayments['block_height']
-                hashid = incpayments['tx_hash']
-                amount = Decimal(get_money(str(incpayments['amount'])))
-                # get user with that payment id
-                getuserswallet = db.session.query(monero_Wallet).filter_by(paymentid=userpaymentid).first()
-                #print(json.dumps(response.json(), indent=4))
-                if getuserswallet is not None:
+                    blockheight = incpayments['block_height']
+                    hashid = incpayments['tx_hash']
+                    amount = Decimal(get_money(str(incpayments['amount'])))
+                    # get user with that payment id
+                    getuserswallet = db.session.query(monero_Wallet).filter_by(paymentid=userpaymentid).first()
+                    #print(json.dumps(response.json(), indent=4))
+                    if getuserswallet is not None:
 
-                    # see if already in db
-                    gettransaction = db.session.query(MoneroTransactions).filter_by(txid=hashid).first()
-                    if gettransaction is None:
-                        print("found new transaction:", str(hashid))
+                        # see if already in db
+                        gettransaction = db.session.query(MoneroTransactions).filter_by(txid=hashid).first()
+                        if gettransaction is None:
+                            print("found new transaction:", str(hashid))
 
-                        # add amount to current balance
-                        currentbalance = getuserswallet.currentbalance
-                        newbalance = Decimal(currentbalance) + Decimal(amount)
-                        getuserswallet.currentbalance = newbalance
-                        db.session.add(getuserswallet)
-                        db.session.commit()
-
-                        # add to transactions
-                        monero_addtransaction(category=3,
-                                              amount=amount,
-                                              userid=getuserswallet.userid,
-                                              txid=hashid,
-                                              shard=shard,
-                                              block=blockheight,
-                                              balance=newbalance,
-                                              confirmed=0,
-                                              fee=0,
-                                              address=''
-                                              )
-
-                        # add total of incomming
-                        addtounconfirmed(amount=amount,
-                                         userid=getuserswallet.userid,
-                                         txid=hashid
-                                         )
-
-                        getbalanceUnconfirmed(getuserswallet.userid)
-
-                        if int(lastblockheight.blockheight) < int(blockheight):
-                            lastblockheight.blockheight = int(blockheight)
-                            db.session.add(lastblockheight)
+                            # add amount to current balance
+                            currentbalance = getuserswallet.currentbalance
+                            newbalance = Decimal(currentbalance) + Decimal(amount)
+                            getuserswallet.currentbalance = newbalance
+                            db.session.add(getuserswallet)
                             db.session.commit()
-                        else:
-                            pass
 
+                            # add to transactions
+                            monero_addtransaction(category=3,
+                                                  amount=amount,
+                                                  userid=getuserswallet.userid,
+                                                  txid=hashid,
+                                                  shard=shard,
+                                                  block=blockheight,
+                                                  balance=newbalance,
+                                                  confirmed=0,
+                                                  fee=0,
+                                                  address=''
+                                                  )
 
-                    else:
-                        # check to see how many confirmations
-                        currentblockheight = lastblockheight.blockheight
-                        if gettransaction.confirmed == 0:
-                            howmanyconfirmations = currentblockheight - gettransaction.block
-                            if howmanyconfirmations <= 15:
-                                gettransaction.confirmations = howmanyconfirmations
-                                db.session.add(gettransaction)
-                                db.session.commit()
-                                # add to unconfirmed
-                                getbalanceUnconfirmed(getuserswallet.userid)
+                            # add total of incomming
+                            addtounconfirmed(amount=amount,
+                                             userid=getuserswallet.userid,
+                                             txid=hashid
+                                             )
 
-                            else:
-                                removeunconfirmed(userid=getuserswallet.userid, txid=hashid)
+                            getbalanceUnconfirmed(getuserswallet.userid)
 
-                                gettransaction.confirmations = 16
-                                gettransaction.confirmed = 1
-                                db.session.add(gettransaction)
-
-                                lastblockheight.lastcheckedheight = blockheight
+                            if int(lastblockheight.blockheight) < int(blockheight):
+                                lastblockheight.blockheight = int(blockheight)
                                 db.session.add(lastblockheight)
                                 db.session.commit()
-
-                                getbalanceUnconfirmed(userid=getuserswallet.userid)
-
+                            else:
+                                pass
 
 
                         else:
-                            # already confirmaed pass
-                            pass
+                            # check to see how many confirmations
+                            currentblockheight = lastblockheight.blockheight
+                            if gettransaction.confirmed == 0:
+                                howmanyconfirmations = currentblockheight - gettransaction.block
+                                if howmanyconfirmations <= 15:
+                                    gettransaction.confirmations = howmanyconfirmations
+                                    db.session.add(gettransaction)
+                                    db.session.commit()
+                                    # add to unconfirmed
+                                    getbalanceUnconfirmed(getuserswallet.userid)
 
-                else:
-                    y = db.session.query(monero_unconfirmed).filter_by(txid=hashid).first()
-                    if y:
-                        pass
+                                else:
+                                    removeunconfirmed(userid=getuserswallet.userid, txid=hashid)
+
+                                    gettransaction.confirmations = 16
+                                    gettransaction.confirmed = 1
+                                    db.session.add(gettransaction)
+
+                                    lastblockheight.lastcheckedheight = blockheight
+                                    db.session.add(lastblockheight)
+                                    db.session.commit()
+
+                                    getbalanceUnconfirmed(userid=getuserswallet.userid)
+
+
+
+                            else:
+                                # already confirmaed pass
+                                pass
+
                     else:
-                        # orphan transaction..put in background.
-                        # they prolly sent no payment id ..
-                        trans = monero_transOrphan(
-                            btc=amount,
-                            txid=hashid,
-                        )
-                        db.session.add(trans)
-                        db.session.commit()
+                        y = db.session.query(monero_unconfirmed).filter_by(txid=hashid).first()
+                        if y:
+                            pass
+                        else:
+                            # orphan transaction..put in background.
+                            # they prolly sent no payment id ..
+                            trans = monero_transOrphan(
+                                btc=amount,
+                                txid=hashid,
+                            )
+                            db.session.add(trans)
+                            db.session.commit()
+    except Exception as e:
+        print(str(e))
+        print("checkincomming error")
 
 def get_money(amount):
-    movetwelvedecimals = 12
+    try:
+        movetwelvedecimals = 12
 
-    s = amount
+        s = amount
 
-    if len(s) < movetwelvedecimals + 1:
-        # add some trailing zeros, if needed, to have constant width
-        s = '0' * (movetwelvedecimals + 1 - len(s)) + s
+        if len(s) < movetwelvedecimals + 1:
+            # add some trailing zeros, if needed, to have constant width
+            s = '0' * (movetwelvedecimals + 1 - len(s)) + s
 
-    idx = len(s) - movetwelvedecimals
+        idx = len(s) - movetwelvedecimals
 
-    s = s[0:idx] + "." + s[idx:]
+        s = s[0:idx] + "." + s[idx:]
 
-    return s
+        return s
+    except Exception as e:
+        print(str(e))
+        print("get_money error")
 
 
 checkincomming()

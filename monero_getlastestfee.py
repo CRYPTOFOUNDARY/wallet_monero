@@ -11,7 +11,6 @@ def getlastestfee():
     :return:
     """
 
-  # gets avg
     getratings = db.session.query(func.avg(MoneroTransactions.fee))
     getratings = getratings.filter(MoneroTransactions.category == 2)
     getratings = getratings.order_by(MoneroTransactions.created.desc())
